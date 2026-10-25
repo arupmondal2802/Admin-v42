@@ -1,16 +1,7 @@
-{
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "admin-v42",
-  "main": "worker.ts",
-  "compatibility_date": "2026-09-03",
-  "observability": {
-    "enabled": true
-  },
-  "assets": {
-    "directory": "./dist",
-    "not_found_handling": "single-page-application"
-  }
-}
+name = "a-big-engine-backend"
+main = "worker.ts"
+compatibility_date = "2024-10-01"
+compatibility_flags = ["nodejs_compat"]
 
 [observability]
 enabled = true
@@ -19,4 +10,3 @@ enabled = true
 BANDWIDTH_SAVER = "true"
 ENVIRONMENT = "production"
 DATABASE_URL = "postgresql://neondb_owner:npg_SYCptsnG2r9U@ep-sparkling-fire-ayctdt0t-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
- 
