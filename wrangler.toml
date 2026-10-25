@@ -1,10 +1,16 @@
-name = "a-big-engine-backend"
+name = "admin-v44"
 main = "worker.ts"
-compatibility_date = "2024-10-01"
+compatibility_date = "2024-10-10"
 compatibility_flags = ["nodejs_compat"]
 
 [observability]
 enabled = true
+
+[assets]
+
+directory = "./dist"
+binding = "ASSETS"
+
 
 [vars]
 BANDWIDTH_SAVER = "true"
