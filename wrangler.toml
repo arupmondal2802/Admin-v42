@@ -1,5 +1,5 @@
 name = "a-big-engine-backend"
-main = "worker.ts"
+main = "src/index.js"
 compatibility_date = "2024-10-01"
 compatibility_flags = ["nodejs_compat"]
 
@@ -10,3 +10,4 @@ enabled = true
 BANDWIDTH_SAVER = "true"
 ENVIRONMENT = "production"
 DATABASE_URL = "postgresql://neondb_owner:npg_SYCptsnG2r9U@ep-sparkling-fire-ayctdt0t-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+ 
