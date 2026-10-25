@@ -242,8 +242,6 @@ const saveQueueToStorage = () => {
 };
 
 const addToQueue = (operation: any) => {
-    console.log("[DEBUG] cloudDataService: addToQueue called with operation:", operation);
-    
     const recordId = operation.payload.record ? operation.payload.record[operation.payload.idField] : operation.payload.recordId;
     const opKey = `${operation.payload.sheetName}-${recordId}`;
     
@@ -979,7 +977,6 @@ const processQueue = async (sheetsUrl: string, proxyUrl?: string | null) => {
 };
 
 const executeOperation = async (operation: any, sheetsUrl: string, proxyUrl?: string | null) => {
-    console.log("[DEBUG] cloudDataService: executeOperation started for operation type:", operation.type);
     if (!sheetsUrl || !sheetsUrl.startsWith('http')) {
         throw new Error("Google Sheets URL is not configured or invalid.");
     }
@@ -1540,7 +1537,7 @@ export const saveRecord = async (sheetName: string, record: any, sheetsUrl?: str
             return { status: 'success', queued: true };
         }
 
-        console.log("🚀 EXECUTING OPERATION:", operation);
+        console.log(`🚀 Executing ${operation.type} for ${operation.payload?.sheetName} (ID: ${operation.payload?.recordId || operation.payload?.record?.[operation.payload?.idField] || 'new'})`);
 
         if (sheetsUrl) {
             if (db) {

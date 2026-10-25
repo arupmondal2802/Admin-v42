@@ -1,4 +1,5 @@
 import { Customer, Service, UserSubscription, CustomerBookEntry, VehicleCategoryTag } from '../types';
+import { maskPhone } from '../utils/privacySanitizer';
 
 // Helper function to normalize mobile numbers to a consistent 10-digit format
 export const normalizeMobileNumber = (phone: string | number | undefined | null): string => {

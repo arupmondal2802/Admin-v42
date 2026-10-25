@@ -4,6 +4,10 @@ import { App } from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { initGlobalHaptics } from './utils/haptics';
 import { initBackButtonHandler } from './utils/backButtonHandler';
+import { installConsoleSanitizer } from './utils/privacySanitizer';
+
+// Initialize Global Console Privacy Sanitizer (masks customer PII like phone, email, name in console)
+installConsoleSanitizer();
 
 // Initialize Android & Touch Haptics Engine
 initGlobalHaptics();

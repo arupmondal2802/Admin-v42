@@ -1379,7 +1379,6 @@ export const App: React.FC = () => {
   };
 
   const handleCompleteOrder = useCallback(async (service: Service) => {
-    console.log("[DEBUG] App: handleCompleteOrder called with:", service);
     const nowIso = new Date().toISOString();
     
     let isUpdating = false;
@@ -1469,11 +1468,9 @@ export const App: React.FC = () => {
     
     setSubmissions(prev => {
       isUpdating = prev.some(s => s.submissionId === service.submissionId);
-      console.log("[DEBUG] App: isUpdating:", isUpdating, "serviceToSave:", serviceToSave);
       const newSubmissions = isUpdating 
         ? prev.map(s => s.submissionId === service.submissionId ? serviceToSave : s) 
         : [serviceToSave, ...prev]; // Add to beginning of array
-      console.log("[DEBUG] App: newSubmissions length after update:", newSubmissions.length);
       // Force a new array reference to ensure React detects the change
       return newSubmissions;
     });
@@ -1600,7 +1597,6 @@ export const App: React.FC = () => {
   }, [settings.googleSheetsUrl, inventoryMovements, predefinedServices, inventoryItems, submissions, handleUpdateNotification, currentUser, settings.notificationRules]);
 
   const handleCreateOrder = useCallback(async (details: any) => {
-    console.log("[DEBUG] App: handleCreateOrder called with details:", details);
     const newSubmissionId = `SUB-${Date.now()}`;
     
     // Ensure we have a valid vehicle category
@@ -1700,7 +1696,6 @@ export const App: React.FC = () => {
       }
     }
 
-    console.log("[DEBUG] App: Final newService object to be saved:", newService);
     return handleCompleteOrder(newService);
   }, [currentUser, handleCompleteOrder, vehicleData, predefinedServices, predefinedServiceCategories, settings.googleSheetsUrl]);
 
