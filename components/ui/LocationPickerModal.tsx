@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { MapLiveTravelTimeBadge } from './MapLiveTravelTimeBadge';
 import { DistanceMatrixResult } from '../../services/distanceMatrixService';
 import { useAndroidBackButton } from '../../hooks/useAndroidBackButton';
+import { getGoogleMapsKey } from '../../services/appConfigService';
 
 export interface LocationPickerAddressComponents {
   houseNo?: string;
@@ -1263,11 +1264,7 @@ const LocationPickerModalContent: React.FC<LocationPickerModalProps> = ({
 };
 
 const LocationPickerModal: React.FC<LocationPickerModalProps> = (props) => {
-  const API_KEY =
-    props.googleMapsApiKey ||
-    process.env.GOOGLE_MAPS_PLATFORM_KEY ||
-    (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
-    'AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M';
+  const API_KEY = props.googleMapsApiKey || getGoogleMapsKey();
 
   const hasValidKey = Boolean(API_KEY) && API_KEY !== 'YOUR_API_KEY';
 

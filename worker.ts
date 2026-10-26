@@ -61,12 +61,12 @@ function successResponse(data: any, extra: Record<string, any> = {}): Response {
 }
 
 function errorResponse(message: string, status = 500, details: any = null, pathInfo?: string): Response {
-  console.error(`❌ [Cloudflare Worker Error] [${status}] ${message}`, { details, path: pathInfo });
+  console.error(`❌ [Cloudflare Worker Error] [${status}] ${message} at ${pathInfo || 'endpoint'}`);
   return jsonResponse({
     status: 'error',
     message,
     error: message,
-    details: details?.message || (typeof details === 'string' ? details : (details ? JSON.stringify(details) : null)),
+    details: details?.message || (typeof details === 'string' ? details : null),
     code: details?.code || null,
     path: pathInfo || null,
     timestamp: new Date().toISOString()
@@ -163,6 +163,29 @@ export default {
           carDatabase: '/api/neon/car-database'
         },
         time: new Date().toISOString()
+      });
+    }
+
+    if (path === '/api/config' || path === '/api/neon/config') {
+      return jsonResponse({
+        status: 'success',
+        data: {
+          appName: 'A Big Engine - Automobile Repair & Maintenance Management',
+          backendUrl: 'https://a-big-engine-admin-backend.abigengine.workers.dev',
+          database: 'Cloudflare Admin Edge (Neon PostgreSQL)',
+          databaseConfigured: Boolean(env?.DATABASE_URL),
+          bandwidthSaver: true,
+          version: '2.5.0',
+          googleMapsPlatformKey: (env as any)?.GOOGLE_MAPS_PLATFORM_KEY || '',
+          vapidPublicKey: (env as any)?.VAPID_PUBLIC_KEY || '',
+          features: {
+            maps: true,
+            aiAssistant: true,
+            pushNotifications: true,
+            disasterRecoveryBackup: false,
+            leadDeltaSync: false,
+          },
+        },
       });
     }
 

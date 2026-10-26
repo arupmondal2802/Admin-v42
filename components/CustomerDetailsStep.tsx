@@ -18,6 +18,7 @@ import OrderTagsManager from './ui/OrderTagsManager';
 import { detectLocationAndGeocode } from '../services/geocodingService';
 import { haversineDistanceKm } from '../services/locationService';
 import { toast } from 'sonner';
+import { getGoogleMapsKey } from '../services/appConfigService';
 
 const CustomerDetailsStep: React.FC<BaseStepProps> = ({ state, updateField, dispatch, userSubscriptions, errors, allSubmissions, vehicleData, carDatabase, onUpdateVehicleData, customerBook, allUsers = [], deliveryHubs }) => {
   const [isSearching, setIsSearching] = useState(false);
@@ -113,7 +114,7 @@ const CustomerDetailsStep: React.FC<BaseStepProps> = ({ state, updateField, disp
     setIsGettingLocation(true);
     const toastId = toast.loading('🛰️ Detecting current GPS coordinates and geocoding address...');
     try {
-      const result = await detectLocationAndGeocode("AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M");
+      const result = await detectLocationAndGeocode(getGoogleMapsKey());
       const lat = result.lat!;
       const lng = result.lng!;
 
@@ -223,7 +224,7 @@ const CustomerDetailsStep: React.FC<BaseStepProps> = ({ state, updateField, disp
         />
         <div className="md:col-span-2">
           <AddressAutofillSection
-            apiKey="AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M"
+            apiKey={getGoogleMapsKey()}
             addressData={{
               streetAddress: state.streetAddress !== undefined && state.streetAddress !== null ? String(state.streetAddress) : '',
               houseNo: state.houseNo !== undefined && state.houseNo !== null ? String(state.houseNo) : '',

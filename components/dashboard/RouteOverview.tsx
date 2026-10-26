@@ -6,6 +6,7 @@ import { IconMapPin, IconChevronLeft, IconChevronRight, IconClock, IconCheck, Ic
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { toast } from 'sonner';
+import { getGoogleMapsKey } from '../../services/appConfigService';
 
 interface RouteOverviewProps {
   submissions: Service[];
@@ -232,11 +233,7 @@ export default function RouteOverview({
   const hubLng = selectedHub?.longitude ?? (selectedHub as any)?.lon ?? 88.3867093;
   const hubLocation = useMemo(() => ({ lat: hubLat, lng: hubLng }), [hubLat, hubLng]);
 
-  const API_KEY =
-    settings?.googleMapsApiKey ||
-    process.env.GOOGLE_MAPS_PLATFORM_KEY ||
-    (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
-    'AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M';
+  const API_KEY = settings?.googleMapsApiKey || getGoogleMapsKey();
 
   const hasValidKey = Boolean(API_KEY) && API_KEY !== 'YOUR_API_KEY';
 

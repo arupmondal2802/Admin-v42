@@ -89,10 +89,6 @@ export const getCloudflareWorkerUrl = (): string => {
       return cf.trim().replace(/\/+$/, '');
     }
   }
-  const envCf = (import.meta as any).env?.VITE_CLOUDFLARE_WORKER_URL;
-  if (envCf && typeof envCf === 'string' && envCf.trim() !== '' && !isDeadBackendUrl(envCf)) {
-    return envCf.trim().replace(/\/+$/, '');
-  }
   return DEFAULT_CLOUDFLARE_ADMIN_BACKEND_URL;
 };
 
@@ -126,16 +122,6 @@ export const getBackendBaseUrl = (): string => {
     if (custom && custom.trim() !== '' && !isDeadBackendUrl(custom)) {
       return custom.trim().replace(/\/+$/, '');
     }
-  }
-
-  const envCf = (import.meta as any).env?.VITE_CLOUDFLARE_WORKER_URL;
-  if (envCf && typeof envCf === 'string' && envCf.trim() !== '' && !isDeadBackendUrl(envCf)) {
-    return envCf.trim().replace(/\/+$/, '');
-  }
-
-  const envUrl = (import.meta as any).env?.VITE_BACKEND_URL;
-  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '' && !isDeadBackendUrl(envUrl)) {
-    return envUrl.trim().replace(/\/+$/, '');
   }
 
   // Always route to admin backend in Cloudflare
