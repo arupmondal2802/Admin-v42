@@ -38,8 +38,6 @@ import { InventoryProvider, InventoryContextType } from './context/InventoryCont
 import { Sidebar } from './components/ui/Sidebar';
 import MobileBottomNav from './components/ui/MobileBottomNav';
 import RealTimeClock from './components/ui/RealTimeClock';
-import { ProfileMenu } from './components/ui/ProfileMenu';
-import { PanelLeft } from 'lucide-react';
 import { DesktopInstallButton } from './components/desktop/DesktopInstallButton';
 import { DesktopInstallModal } from './components/desktop/DesktopInstallModal';
 import { PWAInstallBanner } from './components/desktop/PWAInstallBanner';
@@ -75,7 +73,6 @@ const ClientServiceTracker = React.lazy(() => import('./components/ClientService
 
 import AppRouter from './components/routing/AppRouter';
 import SkeletonLoader from './components/ui/SkeletonLoader';
-import { getGoogleMapsKey } from './services/appConfigService';
 import NewOrderAlertModal from './components/dashboard/NewOrderAlertModal';
 import { playNewOrderChime } from './utils/audioChime';
 
@@ -327,7 +324,7 @@ export const App: React.FC = () => {
     googleDriveUploadUrl: initialUrls.googleDriveUploadUrl, 
     customLogoUrl: localStorage.getItem('customLogoUrl') || '', 
     retentionKpiTargets: defaultKpiTargets,
-    googleMapsApiKey: localStorage.getItem('googleMapsApiKey') || getGoogleMapsKey(),
+    googleMapsApiKey: localStorage.getItem('googleMapsApiKey') || 'AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M',
     hubLatitude: parseFloat(localStorage.getItem('hubLatitude') || '22.572646'),
     hubLongitude: parseFloat(localStorage.getItem('hubLongitude') || '88.363895'),
     maxDistanceKm: parseFloat(localStorage.getItem('maxDistanceKm') || '20'),
@@ -600,27 +597,6 @@ export const App: React.FC = () => {
     }
     return false;
   }, view !== 'DASHBOARD', 10);
-
-  // Global shortcut to toggle sidebar easily (Ctrl+B, Cmd+B, or [)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
-        e.preventDefault();
-        toggleSidebar();
-      } else if (e.key === '[' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        toggleSidebar();
-      } else if (e.key === 'Escape' && isMobileMenuOpen) {
-        closeMobileMenu();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar, isMobileMenuOpen, closeMobileMenu]);
 
   const {
     appIsLoading,
@@ -3458,24 +3434,12 @@ export const App: React.FC = () => {
           >
               <div className="relative flex items-center justify-between min-h-14 sm:min-h-16 px-3 sm:px-4 md:px-6 py-2">
                   <div className="flex items-center gap-2 sm:gap-3">
-                      {/* Mobile menu drawer button */}
                       <button 
                         className="md:hidden p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition-colors active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center" 
                         onClick={() => setIsMobileMenuOpen(true)}
-                        aria-label="Open navigation sidebar"
-                        title="Open navigation menu"
+                        aria-label="Toggle navigation menu"
                       >
                         <IconMenu2 className="w-5 h-5 sm:w-6 sm:h-6" />
-                      </button>
-
-                      {/* Desktop accessible sidebar collapse/expand button */}
-                      <button 
-                        className="hidden md:flex p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition-colors active:scale-95 min-w-[44px] min-h-[44px] items-center justify-center" 
-                        onClick={toggleSidebar}
-                        aria-label={isSidebarMinimized ? "Expand sidebar" : "Collapse sidebar"}
-                        title={isSidebarMinimized ? "Expand sidebar (Ctrl+B or [ )" : "Collapse sidebar (Ctrl+B or [ )"}
-                      >
-                        <PanelLeft className="w-5 h-5" />
                       </button>
 
                       <div className="flex items-center gap-2">
@@ -3540,6 +3504,8 @@ export const App: React.FC = () => {
                           </div>
                       )}
 
+                      <DesktopInstallButton onOpenModal={() => setIsDesktopInstallModalOpen(true)} />
+
                       <SyncStatusIndicator
                           status={syncStatus}
                           errorMessage={syncError}
@@ -3550,20 +3516,22 @@ export const App: React.FC = () => {
                       />
 
                       {currentUser && (
-                          <ProfileMenu
-                              currentUser={currentUser}
-                              onOpenSettings={() => setView('SETTINGS')}
-                              onOpenOfflineSync={() => setView('OFFLINE_SYNC_MANAGER')}
-                              onOpenChangePassword={() => setIsChangePasswordModalOpen(true)}
-                              onOpenDesktopInstall={() => setIsDesktopInstallModalOpen(true)}
-                              onOpenDiagnostics={() => setIsDiagnosticOverlayOpen(true)}
-                              onLogout={handleLogout}
-                              canShowSettings={
-                                currentUser.role === 'admin' || 
-                                currentUser.role === 'manager' || 
-                                (currentUser.permissions && currentUser.permissions.includes(Permission.CAN_EDIT_SETTINGS))
-                              }
-                          />
+                          <div 
+                              onClick={() => setIsChangePasswordModalOpen(true)}
+                              className="hidden md:flex items-center gap-2.5 pl-2.5 border-l border-slate-800 cursor-pointer group hover:opacity-90 transition-opacity"
+                              title="Click to Change Password"
+                          >
+                              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-blue to-blue-600 text-white font-extrabold text-xs flex items-center justify-center shadow-xs border border-blue-400/30 group-hover:ring-2 group-hover:ring-brand-accent/50 transition-all">
+                                  {currentUser.username ? currentUser.username.charAt(0).toUpperCase() : 'A'}
+                              </div>
+                              <div className="hidden lg:block text-left leading-tight">
+                                  <div className="text-xs font-bold text-slate-100 truncate max-w-[120px] flex items-center gap-1">
+                                      <span>{currentUser.username}</span>
+                                      <IconKey className="w-3 h-3 text-brand-accent opacity-60 group-hover:opacity-100 transition-opacity" />
+                                  </div>
+                                  <div className="text-[10px] font-semibold text-slate-400 capitalize">{currentUser.role || 'Staff'}</div>
+                              </div>
+                          </div>
                       )}
                   </div>
               </div>

@@ -500,7 +500,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
     if (Object.keys(validationErrors).length === 0) {
       setCurrentStepIndex(prev => Math.min(prev + 1, visibleSteps.length - 1));
     } else {
-      console.warn("Step validation failed:", currentStepName);
+      console.warn("Step validation failed:", currentStepName, validationErrors);
       const firstErrorMsg = Object.values(validationErrors).find(e => typeof e === 'string');
       if (firstErrorMsg) {
         toast.error(firstErrorMsg as string);

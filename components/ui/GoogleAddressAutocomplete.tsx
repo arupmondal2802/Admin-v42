@@ -4,7 +4,6 @@ import { MapPin, Navigation, Compass, Loader2, CheckCircle2, AlertCircle, AlertT
 import { findNearestHub, DEFAULT_DELIVERY_HUBS } from '../../constants';
 import { parseGoogleAddressComponents } from '../../utils/addressUtils';
 import { reverseGeocodeCoords } from '../../services/geocodingService';
-import { getGoogleMapsKey } from '../../services/appConfigService';
 
 export interface AddressSelectResult {
   address: string;
@@ -708,7 +707,11 @@ function getCoordValue(val: any): number {
 }
 
 export const GoogleAddressAutocomplete: React.FC<GoogleAddressAutocompleteProps> = (props) => {
-  const API_KEY = props.googleMapsApiKey || getGoogleMapsKey();
+  const API_KEY =
+    props.googleMapsApiKey ||
+    process.env.GOOGLE_MAPS_PLATFORM_KEY ||
+    (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
+    'AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M';
 
   const hasKey = Boolean(API_KEY) && API_KEY !== 'YOUR_API_KEY';
 

@@ -87,11 +87,26 @@ const MAX_TRACES = 60;
 function recordTrace(trace: BackendTraceLog) {
   networkTraces.unshift(trace);
   if (networkTraces.length > MAX_TRACES) networkTraces.pop();
+
+  if (typeof window !== 'undefined') {
+    (window as any).__BACKEND_TRACES__ = networkTraces;
+  }
 }
 
 export const getBackendNetworkTraces = (): BackendTraceLog[] => [...networkTraces];
 export const getLastBackendError = (): BackendTraceLog | null => networkTraces.find(t => !t.ok) || null;
 export const clearBackendNetworkTraces = () => { networkTraces.length = 0; };
+
+// Expose helpful developer diagnostics in browser console
+if (typeof window !== 'undefined') {
+  (window as any).__BE_DIAGNOSTICS__ = {
+    getLogs: getBackendNetworkTraces,
+    getLastError: getLastBackendError,
+    clearLogs: clearBackendNetworkTraces,
+    getBaseUrl: getNeonBaseUrl,
+    ping: () => neonDataService.checkHealth()
+  };
+}
 
 /**
  * Safe fetch wrapper for Neon endpoints with detailed telemetry and error logging.
@@ -108,12 +123,12 @@ async function fetchNeon(path: string, options?: RequestInit): Promise<Response>
   if (customBase) {
     const fullUrl = `${customBase}${cleanPath}`;
     try {
-      console.log(`🌐 [Backend] ${method} ${cleanPath}`);
+      console.log(`🌐 [Backend Call] ${method} ${fullUrl}`);
       const res = await fetch(fullUrl, options);
       const durationMs = Math.round(performance.now() - tStart);
 
       if (res.ok) {
-        console.log(`✅ [Backend] ${method} ${cleanPath} [HTTP ${res.status}] (${durationMs}ms)`);
+        console.log(`✅ [Backend Success] ${method} ${fullUrl} [HTTP ${res.status}] (${durationMs}ms)`);
         recordTrace({
           id: traceId,
           timestamp: new Date().toISOString(),
@@ -130,11 +145,13 @@ async function fetchNeon(path: string, options?: RequestInit): Promise<Response>
       }
 
       // If server responded with a non-OK status (e.g. 500 or 404)
+      const errClone = res.clone();
+      const errText = await errClone.text().catch(() => '');
       if (res.status === 404) {
-        console.warn(`ℹ️ [Backend] ${method} ${cleanPath} (404)`);
+        console.warn(`ℹ️ [Backend 404] ${method} ${fullUrl} (${durationMs}ms) - checking collection fallback`);
         return res;
       }
-      console.error(`❌ [Backend HTTP ${res.status}] ${method} ${cleanPath} (${durationMs}ms)`);
+      console.error(`❌ [Backend HTTP ${res.status}] ${method} ${fullUrl} (${durationMs}ms):`, errText.slice(0, 300));
       
       recordTrace({
         id: traceId,
@@ -147,7 +164,8 @@ async function fetchNeon(path: string, options?: RequestInit): Promise<Response>
         statusText: res.statusText,
         durationMs,
         ok: false,
-        error: `HTTP ${res.status} ${res.statusText}`
+        error: `HTTP ${res.status} ${res.statusText}`,
+        details: errText.slice(0, 500)
       });
 
       // If it's a 4xx client validation error, return it directly so the caller can inspect validation messages
@@ -155,10 +173,10 @@ async function fetchNeon(path: string, options?: RequestInit): Promise<Response>
         return res;
       }
 
-      console.warn(`⚠️ [Backend Fallback] Admin backend returned HTTP ${res.status}. Falling back...`);
+      console.warn(`⚠️ [Backend Fallback] Cloudflare Worker at ${customBase} returned HTTP ${res.status}. Attempting same-origin fallback...`);
     } catch (networkErr: any) {
       const durationMs = Math.round(performance.now() - tStart);
-      console.error(`❌ [Backend Network] Cannot reach ${cleanPath} (${durationMs}ms)`);
+      console.error(`❌ [Backend Network Failure] Cannot reach ${fullUrl} (${durationMs}ms):`, networkErr.message);
       
       recordTrace({
         id: traceId,
@@ -171,9 +189,9 @@ async function fetchNeon(path: string, options?: RequestInit): Promise<Response>
         statusText: 'NETWORK_ERROR',
         durationMs,
         ok: false,
-        error: networkErr?.message || 'Network Error'
+        error: networkErr.message
       });
-      console.warn(`⚠️ [Backend Fallback] Falling back to same-origin /api...`);
+      console.warn(`⚠️ [Backend Fallback] Custom URL ${customBase} unreachable. Falling back to same-origin /api...`);
     }
   }
 

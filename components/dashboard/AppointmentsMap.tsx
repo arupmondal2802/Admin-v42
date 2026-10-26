@@ -5,7 +5,6 @@ import { DEFAULT_DELIVERY_HUBS } from '../../constants';
 import { toISTDateString } from '../../utils/dateTimeUtils';
 import { IconMapPin } from '../ui/Icon';
 import MapZoomControls from '../ui/MapZoomControls';
-import { getGoogleMapsKey } from '../../services/appConfigService';
 
 interface AppointmentsMapProps {
   services: Service[];
@@ -128,7 +127,11 @@ function AppointmentMarker({ service, color }: { service: Service; color: string
 }
 
 export const AppointmentsMap: React.FC<AppointmentsMapProps> = ({ services, settings, deliveryHubs }) => {
-  const API_KEY = settings?.googleMapsApiKey || getGoogleMapsKey();
+  const API_KEY =
+    settings?.googleMapsApiKey ||
+    process.env.GOOGLE_MAPS_PLATFORM_KEY ||
+    (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
+    'AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M';
 
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');

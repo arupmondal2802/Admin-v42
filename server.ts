@@ -59,37 +59,6 @@ async function startServer() {
     });
   });
 
-  app.get(['/api/config', '/api/neon/config'], async (req, res) => {
-    const adminBackendUrl = 'https://a-big-engine-admin-backend.abigengine.workers.dev';
-    try {
-      const upstream = await fetch(`${adminBackendUrl}/api/config`);
-      if (upstream.ok) {
-        const data = await upstream.json();
-        return res.json(data);
-      }
-    } catch {
-      // Fallback
-    }
-    return res.json({
-      status: 'success',
-      data: {
-        appName: 'A Big Engine - Automobile Repair & Maintenance Management',
-        backendUrl: adminBackendUrl,
-        database: 'Cloudflare Admin Edge (Neon PostgreSQL)',
-        databaseConfigured: true,
-        bandwidthSaver: true,
-        version: '2.5.0',
-        features: {
-          maps: true,
-          aiAssistant: true,
-          pushNotifications: true,
-          disasterRecoveryBackup: false,
-          leadDeltaSync: false
-        }
-      }
-    });
-  });
-
   // Mocking Netlify functions and API endpoints
   app.post(['/.netlify/functions/chat-with-bot', '/api/chat-with-bot'], async (req, res) => {
     try {
@@ -1067,6 +1036,7 @@ Start the conversation by greeting the user and asking for their first name. Be 
           });
 
           const msg91Data = await msg91Res.json();
+          console.log('[MSG91 Flow API Response]:', msg91Data);
 
           if (!msg91Res.ok || msg91Data.type === 'error') {
             return res.status(200).json({
@@ -1081,7 +1051,7 @@ Start the conversation by greeting the user and asking for their first name. Be 
           return res.json({
             success: true,
             simulated: false,
-            message: `SMS dispatched successfully via MSG91 Flow API!`,
+            message: `SMS dispatched successfully via MSG91 Flow API to ${formattedPhone}!`,
             msg91Response: msg91Data,
             smsText,
           });
@@ -1100,12 +1070,14 @@ Start the conversation by greeting the user and asking for their first name. Be 
             ]
           };
 
+          console.log(`[MSG91 Direct SMS] Posting to ${url}`);
           const msg91Res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(directPayload)
           });
           const msg91Data = await msg91Res.json();
+          console.log('[MSG91 Direct SMS Response]:', msg91Data);
 
           return res.json({
             success: true,

@@ -33,7 +33,6 @@ import { dataSyncManager } from '../services/dataSyncManager';
 import { Network } from '@capacitor/network';
 import * as authService from '../services/authService';
 import * as inventoryService from '../services/inventoryService';
-import { getGoogleMapsKey } from '../services/appConfigService';
 import { migrateAllToIndexedDb, getIndexedDbItem } from '../services/indexedDbService';
 import { CAR_BRANDS, TIRE_BRANDS } from '../data/vehicleData';
 import { getCategoryForVehicle } from '../services/vehicleService';
@@ -394,7 +393,7 @@ export function useAppInit(props: UseAppInitProps): UseAppInitReturn {
       googleDriveUploadUrl: currentSyncUrls.googleDriveUploadUrl, 
       customLogoUrl: localStorage.getItem('customLogoUrl') || '', 
       retentionKpiTargets: JSON.parse(localStorage.getItem('retentionKpiTargets') || 'null') || defaultKpiTargets,
-      googleMapsApiKey: localStorage.getItem('googleMapsApiKey') || getGoogleMapsKey(),
+      googleMapsApiKey: localStorage.getItem('googleMapsApiKey') || 'AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M',
       hubLatitude: parseFloat(localStorage.getItem('hubLatitude') || '22.572646'),
       hubLongitude: parseFloat(localStorage.getItem('hubLongitude') || '88.363895'),
       maxDistanceKm: parseFloat(localStorage.getItem('maxDistanceKm') || '20'),

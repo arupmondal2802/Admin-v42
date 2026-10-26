@@ -5,7 +5,6 @@ import { db, isQuotaExceeded, setQuotaExceeded, checkIsQuotaError } from '../ser
 import { Service, ServiceStatus, Settings, LocationHistory } from '../types';
 import * as cloudDataService from '../services/cloudDataService';
 import { getIndexedDbItem } from '../services/indexedDbService';
-import { getGoogleMapsKey } from '../services/appConfigService';
 import { 
   MapPin, 
   Clock, 
@@ -99,7 +98,12 @@ export const ClientServiceTracker: React.FC<Props> = ({ trackingId, settings, on
   const [showItemDetails, setShowItemDetails] = useState(false);
 
   const API_KEY = useMemo(() => {
-    return settings.googleMapsApiKey || getGoogleMapsKey();
+    return (
+      process.env.GOOGLE_MAPS_PLATFORM_KEY ||
+      (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
+      settings.googleMapsApiKey ||
+      'AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M'
+    );
   }, [settings.googleMapsApiKey]);
 
   // Helper for flexible order matching across submissionId, appointmentId, suffixes, and mobile numbers

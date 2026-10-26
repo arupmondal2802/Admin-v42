@@ -14,7 +14,6 @@ import LocationPickerModal from '../ui/LocationPickerModal';
 import AddressAutofillSection from '../ui/AddressAutofillSection';
 import OrderTagsManager from '../ui/OrderTagsManager';
 import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
-import { getGoogleMapsKey } from '../../services/appConfigService';
 import { 
   WASH_TYPES, 
   CAR_CARE_TYPES, 
@@ -349,7 +348,11 @@ const AutocompleteInput: React.FC<Omit<GoogleAddressAutocompleteProps, 'apiKey'>
 
 const GoogleAddressAutocomplete: React.FC<GoogleAddressAutocompleteProps> = (props) => {
   const { apiKey, ...rest } = props;
-  const effectiveKey = apiKey || getGoogleMapsKey();
+  const effectiveKey =
+    apiKey ||
+    process.env.GOOGLE_MAPS_PLATFORM_KEY ||
+    (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
+    'AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M';
 
   return (
     <APIProvider apiKey={effectiveKey} version="weekly" libraries={['places', 'geocoding', 'routes', 'geometry']}>
@@ -395,7 +398,11 @@ const CreateOrderModal: React.FC<Props> = ({
   customerBook,
   serviceRequests,
 }) => {
-  const API_KEY = settings?.googleMapsApiKey || getGoogleMapsKey();
+  const API_KEY =
+    settings?.googleMapsApiKey ||
+    process.env.GOOGLE_MAPS_PLATFORM_KEY ||
+    (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
+    'AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M';
 
   const [formData, setFormData] = useState(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
