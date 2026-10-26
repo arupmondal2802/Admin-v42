@@ -87,26 +87,11 @@ const MAX_TRACES = 60;
 function recordTrace(trace: BackendTraceLog) {
   networkTraces.unshift(trace);
   if (networkTraces.length > MAX_TRACES) networkTraces.pop();
-
-  if (typeof window !== 'undefined') {
-    (window as any).__BACKEND_TRACES__ = networkTraces;
-  }
 }
 
 export const getBackendNetworkTraces = (): BackendTraceLog[] => [...networkTraces];
 export const getLastBackendError = (): BackendTraceLog | null => networkTraces.find(t => !t.ok) || null;
 export const clearBackendNetworkTraces = () => { networkTraces.length = 0; };
-
-// Expose helpful developer diagnostics in browser console
-if (typeof window !== 'undefined') {
-  (window as any).__BE_DIAGNOSTICS__ = {
-    getLogs: getBackendNetworkTraces,
-    getLastError: getLastBackendError,
-    clearLogs: clearBackendNetworkTraces,
-    getBaseUrl: getNeonBaseUrl,
-    ping: () => neonDataService.checkHealth()
-  };
-}
 
 /**
  * Safe fetch wrapper for Neon endpoints with detailed telemetry and error logging.
@@ -123,12 +108,12 @@ async function fetchNeon(path: string, options?: RequestInit): Promise<Response>
   if (customBase) {
     const fullUrl = `${customBase}${cleanPath}`;
     try {
-      console.log(`🌐 [Backend Call] ${method} ${fullUrl}`);
+      console.log(`🌐 [Backend] ${method} ${cleanPath}`);
       const res = await fetch(fullUrl, options);
       const durationMs = Math.round(performance.now() - tStart);
 
       if (res.ok) {
-        console.log(`✅ [Backend Success] ${method} ${fullUrl} [HTTP ${res.status}] (${durationMs}ms)`);
+        console.log(`✅ [Backend] ${method} ${cleanPath} [HTTP ${res.status}] (${durationMs}ms)`);
         recordTrace({
           id: traceId,
           timestamp: new Date().toISOString(),
@@ -145,9 +130,11 @@ async function fetchNeon(path: string, options?: RequestInit): Promise<Response>
       }
 
       // If server responded with a non-OK status (e.g. 500 or 404)
-      const errClone = res.clone();
-      const errText = await errClone.text().catch(() => '');
-      console.error(`❌ [Backend HTTP ${res.status}] ${method} ${fullUrl} (${durationMs}ms):`, errText.slice(0, 300));
+      if (res.status === 404) {
+        console.warn(`ℹ️ [Backend] ${method} ${cleanPath} (404)`);
+        return res;
+      }
+      console.error(`❌ [Backend HTTP ${res.status}] ${method} ${cleanPath} (${durationMs}ms)`);
       
       recordTrace({
         id: traceId,
@@ -160,19 +147,18 @@ async function fetchNeon(path: string, options?: RequestInit): Promise<Response>
         statusText: res.statusText,
         durationMs,
         ok: false,
-        error: `HTTP ${res.status} ${res.statusText}`,
-        details: errText.slice(0, 500)
+        error: `HTTP ${res.status} ${res.statusText}`
       });
 
       // If it's a 4xx client validation error, return it directly so the caller can inspect validation messages
-      if (res.status >= 400 && res.status < 500 && res.status !== 404) {
+      if (res.status >= 400 && res.status < 500) {
         return res;
       }
 
-      console.warn(`⚠️ [Backend Fallback] Cloudflare Worker at ${customBase} returned HTTP ${res.status}. Attempting same-origin fallback...`);
+      console.warn(`⚠️ [Backend Fallback] Admin backend returned HTTP ${res.status}. Falling back...`);
     } catch (networkErr: any) {
       const durationMs = Math.round(performance.now() - tStart);
-      console.error(`❌ [Backend Network Failure] Cannot reach ${fullUrl} (${durationMs}ms):`, networkErr.message);
+      console.error(`❌ [Backend Network] Cannot reach ${cleanPath} (${durationMs}ms)`);
       
       recordTrace({
         id: traceId,
@@ -185,9 +171,9 @@ async function fetchNeon(path: string, options?: RequestInit): Promise<Response>
         statusText: 'NETWORK_ERROR',
         durationMs,
         ok: false,
-        error: networkErr.message
+        error: networkErr?.message || 'Network Error'
       });
-      console.warn(`⚠️ [Backend Fallback] Custom URL ${customBase} unreachable. Falling back to same-origin /api...`);
+      console.warn(`⚠️ [Backend Fallback] Falling back to same-origin /api...`);
     }
   }
 
@@ -282,12 +268,12 @@ export const neonDataService = {
           return false;
         }
         const json = await res.json().catch(() => null);
-        if (json && (json.status === 'ok' || json.connected !== undefined)) {
+        if (json && (json.connected === true || (json.status === 'ok' && json.connected !== false)) && !json.error) {
           console.log(`✅ [Neon Ping] Backend is ONLINE & healthy! Latency: ${json.latencyMs || 'unknown'}ms`);
           markNeonAvailable();
           return true;
         }
-        console.warn('⚠️ [Neon Ping] Health response did not contain expected status:', json);
+        console.warn('⚠️ [Neon Ping] Neon backend is offline or disconnected:', json?.error || json?.message || json);
         markNeonUnavailable();
         return false;
       } catch (pingErr: any) {
@@ -320,10 +306,15 @@ export const neonDataService = {
       }
 
       if (!res.ok) {
+        markNeonUnavailable();
         return { connected: false, error: `HTTP ${res.status}` };
       }
       const data = await res.json();
-      markNeonAvailable();
+      if (data && data.connected === true && !data.error) {
+        markNeonAvailable();
+      } else {
+        markNeonUnavailable();
+      }
       return data;
     } catch (err: any) {
       return { connected: false, error: err.message || 'Cannot reach Neon backend' };
@@ -352,9 +343,15 @@ export const neonDataService = {
         params.set('limit', String(limit));
         if (status && status !== 'ALL') params.set('status', status);
 
-        const res = await fetchNeon(`/api/neon/orders?${params.toString()}`);
+        let res = await fetchNeon(`/api/neon/orders?${params.toString()}`);
         if (!res.ok) {
-          markNeonUnavailable();
+          const colRes = await fetchNeon('/api/neon/collection/service_orders');
+          if (colRes.ok) {
+            const json = await colRes.json();
+            const data = extractArrayData<Service>(json);
+            cacheStore.set(cacheKey, { data, timestamp: Date.now() });
+            return data;
+          }
           return [];
         }
         const json = await res.json();
@@ -378,6 +375,9 @@ export const neonDataService = {
    * Load dedicated website orders directly from Neon "orders" table (supports delta fetching via since)
    */
   async loadWebsiteOrders(options?: { limit?: number; since?: string } | number): Promise<Service[]> {
+    if (isNeonAvailable === false && (Date.now() - lastCheckTimestamp) < AVAILABILITY_TTL_MS) {
+      return [];
+    }
     const limit = typeof options === 'number' ? options : (options?.limit || 1000);
     const since = typeof options === 'object' ? options?.since : undefined;
     const timestamp = Date.now();
@@ -392,24 +392,28 @@ export const neonDataService = {
         headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
       });
       if (res.ok) {
-        const json = await res.json();
-        markNeonAvailable();
-        return extractArrayData<Service>(json);
+        const json = await res.json().catch(() => null);
+        if (json && json.status === 'success') {
+          markNeonAvailable();
+          return extractArrayData<Service>(json);
+        }
       }
     } catch (directErr) {
-      console.warn('Direct /api/neon/website-orders fetch failed, falling back to fetchNeon:', directErr);
+      // Quietly fall back
     }
 
     try {
       // 2. FetchNeon wrapper attempt
       const res = await fetchNeon(`/api/neon/website-orders?${queryParams.toString()}`);
       if (res.ok) {
-        const json = await res.json();
-        markNeonAvailable();
-        return extractArrayData<Service>(json);
+        const json = await res.json().catch(() => null);
+        if (json && json.status === 'success') {
+          markNeonAvailable();
+          return extractArrayData<Service>(json);
+        }
       }
     } catch (e) {
-      console.warn('fetchNeon /api/neon/website-orders error:', e);
+      // Quietly fall back
     }
 
     return this.loadOrders(limit);
@@ -460,9 +464,15 @@ export const neonDataService = {
 
     const requestPromise = (async () => {
       try {
-        const res = await fetchNeon(`/api/neon/leads?limit=${limit}`);
+        let res = await fetchNeon(`/api/neon/leads?limit=${limit}`);
         if (!res.ok) {
-          markNeonUnavailable();
+          const colRes = await fetchNeon('/api/neon/collection/service_requests');
+          if (colRes.ok) {
+            const json = await colRes.json();
+            const data = extractArrayData<ServiceRequest>(json);
+            cacheStore.set(cacheKey, { data, timestamp: Date.now() });
+            return data;
+          }
           return [];
         }
         const json = await res.json();
@@ -998,7 +1008,10 @@ export const neonDataService = {
         params.set('limit', String(limit));
         if (category && category !== 'ALL') params.set('category', category);
 
-        const res = await fetchNeon(`/api/neon/expenses?${params.toString()}`);
+        let res = await fetchNeon(`/api/neon/expenses?${params.toString()}`);
+        if (!res.ok) {
+          res = await fetchNeon('/api/neon/collection/expenses');
+        }
         if (!res.ok) return [];
         const json = await res.json();
         const data = extractArrayData(json);
@@ -1019,15 +1032,18 @@ export const neonDataService = {
     if (isNeonAvailable === false && (Date.now() - lastCheckTimestamp) < AVAILABILITY_TTL_MS) return false;
     try {
       const payload = Array.isArray(expenses) ? expenses : [expenses];
-      const res = await fetchNeon('/api/neon/expenses', {
+      let res = await fetchNeon('/api/neon/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      if (!res.ok) {
+        return this.saveCollection('expenses', payload);
+      }
       invalidateNeonCache('expenses_');
       return res.ok;
     } catch {
-      return false;
+      return this.saveCollection('expenses', expenses);
     }
   },
 
@@ -1059,7 +1075,10 @@ export const neonDataService = {
 
     const requestPromise = (async () => {
       try {
-        const res = await fetchNeon(`/api/neon/warranties?limit=${limit}`);
+        let res = await fetchNeon(`/api/neon/warranties?limit=${limit}`);
+        if (!res.ok) {
+          res = await fetchNeon('/api/neon/collection/warranties');
+        }
         if (!res.ok) return [];
         const json = await res.json();
         const data = extractArrayData(json);
@@ -1080,15 +1099,18 @@ export const neonDataService = {
     if (isNeonAvailable === false && (Date.now() - lastCheckTimestamp) < AVAILABILITY_TTL_MS) return false;
     try {
       const payload = Array.isArray(warranties) ? warranties : [warranties];
-      const res = await fetchNeon('/api/neon/warranties', {
+      let res = await fetchNeon('/api/neon/warranties', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      if (!res.ok) {
+        return this.saveCollection('warranties', payload);
+      }
       invalidateNeonCache('warranties_');
       return res.ok;
     } catch {
-      return false;
+      return this.saveCollection('warranties', warranties);
     }
   },
 
@@ -1114,7 +1136,10 @@ export const neonDataService = {
       params.set('limit', String(limit));
       if (targetUser && targetUser !== 'ALL') params.set('targetUser', targetUser);
 
-      const res = await fetchNeon(`/api/neon/notifications?${params.toString()}`);
+      let res = await fetchNeon(`/api/neon/notifications?${params.toString()}`);
+      if (!res.ok) {
+        res = await fetchNeon('/api/neon/collection/notifications');
+      }
       if (!res.ok) return [];
       const json = await res.json();
       return extractArrayData(json);
@@ -1127,14 +1152,17 @@ export const neonDataService = {
     if (isNeonAvailable === false && (Date.now() - lastCheckTimestamp) < AVAILABILITY_TTL_MS) return false;
     try {
       const payload = Array.isArray(notifications) ? notifications : [notifications];
-      const res = await fetchNeon('/api/neon/notifications', {
+      let res = await fetchNeon('/api/neon/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      if (!res.ok) {
+        return this.saveCollection('notifications', payload);
+      }
       return res.ok;
     } catch {
-      return false;
+      return this.saveCollection('notifications', notifications);
     }
   },
 

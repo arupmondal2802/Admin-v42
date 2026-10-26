@@ -1537,7 +1537,7 @@ export const saveRecord = async (sheetName: string, record: any, sheetsUrl?: str
             return { status: 'success', queued: true };
         }
 
-        console.log(`🚀 Executing ${operation.type} for ${operation.payload?.sheetName} (ID: ${operation.payload?.recordId || operation.payload?.record?.[operation.payload?.idField] || 'new'})`);
+        console.log(`🚀 Executing ${operation.type} for ${operation.payload.sheetName} (ID: ${recordId || 'new'})`);
 
         if (sheetsUrl) {
             if (db) {

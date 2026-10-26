@@ -2,7 +2,6 @@
 
 // worker.ts
 import { neon } from "@neondatabase/serverless";
-var DEFAULT_DATABASE_URL = "postgresql://neondb_owner:npg_SYCptsnG2r9U@ep-sparkling-fire-ayctdt0t-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
 var CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE, PATCH",
@@ -28,12 +27,12 @@ function successResponse(data, extra = {}) {
   });
 }
 function errorResponse(message, status = 500, details = null, pathInfo) {
-  console.error(`\u274C [Cloudflare Worker Error] [${status}] ${message}`, { details, path: pathInfo });
+  console.error(`\u274C [Cloudflare Worker Error] [${status}] ${message} at ${pathInfo || 'endpoint'}`);
   return jsonResponse({
     status: "error",
     message,
     error: message,
-    details: details?.message || (typeof details === "string" ? details : details ? JSON.stringify(details) : null),
+    details: details?.message || (typeof details === "string" ? details : null),
     code: details?.code || null,
     path: pathInfo || null,
     timestamp: (/* @__PURE__ */ new Date()).toISOString()
@@ -115,7 +114,10 @@ function getDefaultPermissionsForRole(role) {
   }
 }
 function getSql(env) {
-  const dbUrl = env && env.DATABASE_URL || DEFAULT_DATABASE_URL;
+  const dbUrl = env && env.DATABASE_URL;
+  if (!dbUrl) {
+    throw new Error('DATABASE_URL environment variable is not configured on Cloudflare Worker.');
+  }
   return neon(dbUrl);
 }
 var worker_default = {
@@ -149,6 +151,28 @@ var worker_default = {
           carDatabase: "/api/neon/car-database"
         },
         time: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    }
+    if (path === "/api/config" || path === "/api/neon/config") {
+      return jsonResponse({
+        status: "success",
+        data: {
+          appName: "A Big Engine - Automobile Repair & Maintenance Management",
+          backendUrl: "https://a-big-engine-admin-backend.abigengine.workers.dev",
+          database: "Cloudflare Admin Edge (Neon PostgreSQL)",
+          databaseConfigured: Boolean(env?.DATABASE_URL),
+          bandwidthSaver: true,
+          version: "2.5.0",
+          googleMapsPlatformKey: env?.GOOGLE_MAPS_PLATFORM_KEY || "",
+          vapidPublicKey: env?.VAPID_PUBLIC_KEY || "",
+          features: {
+            maps: true,
+            aiAssistant: true,
+            pushNotifications: true,
+            disasterRecoveryBackup: false,
+            leadDeltaSync: false
+          }
+        }
       });
     }
     if (path === "/api/health") {

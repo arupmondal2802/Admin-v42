@@ -471,7 +471,6 @@ export const findCustomerByMobile = async (
     customerBook?: CustomerBookEntry[],
     serviceRequests?: any[]
 ): Promise<Array<{ customer: Customer; isSubscriber: boolean; washesRemaining?: number; subscriptionPlanName?: string }> | null> => {
-    console.log(`[DEBUG] customerService: findCustomerByMobile called with mobileNumber: ${mobileNumber}`);
     const normalizedInput = normalizeMobileNumber(mobileNumber);
     const rawDigits = String(mobileNumber || '').replace(/\D/g, '');
     const last10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
@@ -481,7 +480,6 @@ export const findCustomerByMobile = async (
     const isPartial = last10.length >= 4 && last10.length < 10;
 
     if (!isExact && !isPartial) {
-        console.log(`[DEBUG] customerService: Mobile number too short, returning null`);
         return null;
     }
 
@@ -513,7 +511,6 @@ export const findCustomerByMobile = async (
     // If no local match is found and we are in browser with at least 5 digits, query backend API
     if (allEntries.length === 0 && matchedBookEntries.length === 0 && matchedRequests.length === 0) {
       if (typeof window !== 'undefined' && last10.length >= 5) {
-        console.log(`[DEBUG] customerService: Querying backend /api/customer/lookup for ${last10}...`);
         const apiProfile = await fetchCustomerByMobileFromApi(last10);
         if (apiProfile) {
           const vehs = apiProfile.savedVehicles.length > 0 ? apiProfile.savedVehicles : [{ carNumber: '', carBrandModel: '' }];
@@ -537,7 +534,6 @@ export const findCustomerByMobile = async (
           }));
         }
       }
-      console.log("[DEBUG] customerService: No customer data found for this mobile number.");
       return null;
     }
 
@@ -722,7 +718,6 @@ export const findCustomerByMobile = async (
     }
 
     if (profiles.length === 0) {
-        console.log("[DEBUG] customerService: No customer profiles could be constructed.");
         return null;
     }
     

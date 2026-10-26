@@ -13,10 +13,18 @@ export function getDbPool(): Pool | null {
   }
   if (!pool) {
     try {
-      pool = new Pool({ connectionString });
+      pool = new Pool({
+        connectionString,
+        connectionTimeoutMillis: 5000,
+        idleTimeoutMillis: 10000
+      });
+      // CRITICAL: Attach error listener to prevent uncaught EventEmitter errors from terminating the Node process
+      pool.on('error', (err: any) => {
+        console.warn('⚠️ [Neon PostgreSQL Pool Error - Handled]:', err?.message || err);
+      });
       console.log('🐘 [Neon PostgreSQL] Initialized connection pool successfully.');
-    } catch (err) {
-      console.error('⚠️ [Neon PostgreSQL] Failed to initialize connection pool:', err);
+    } catch (err: any) {
+      console.error('⚠️ [Neon PostgreSQL] Failed to initialize connection pool:', err?.message || err);
       return null;
     }
   }

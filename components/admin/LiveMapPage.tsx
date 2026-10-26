@@ -10,6 +10,7 @@ import Input from '../ui/Input';
 import SkeletonLoader from '../ui/SkeletonLoader';
 import MapZoomControls from '../ui/MapZoomControls';
 import { isSameDay, getServiceDate } from '../../utils/dateTimeUtils';
+import { getGoogleMapsKey } from '../../services/appConfigService';
 
 const truckIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 18px; height: 18px; color: white;"><path d="M3.375 4.5C2.339 4.5 1.5 5.34 1.5 6.375V13.5h1.5v-1.125c0-1.036.84-1.875 1.875-1.875h13.5c1.035 0 1.875.84 1.875 1.875v1.125h1.5V6.375c0-1.036-.84-1.875-1.875-1.875h-13.5Z" /><path fill-rule="evenodd" d="M3 19.5a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm12 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM1.5 15a.75.75 0 0 0-.75.75v3c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75v-3a.75.75 0 0 0-.75-.75h-1.5Zm12 0a.75.75 0 0 0-.75.75v3c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75v-3a.75.75 0 0 0-.75-.75h-1.5Z" clip-rule="evenodd" /></svg>`;
 const houseIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 14px; height: 14px; color: white;"><path d="M11.47 3.84a.75.75 0 011.06 0l8.69 8.69a.75.75 0 101.06-1.06l-8.689-8.69a2.25 2.25 0 00-3.182 0l-8.69 8.69a.75.75 0 001.061 1.06l8.69-8.69z" /><path d="M12 5.432l8.159 8.159c.03.03.06.058.091.086v6.198c0 1.035-.84 1.875-1.875 1.875H15a.75.75 0 01-.75-.75v-4.5a.75.75 0 00-.75-.75h-3a.75.75 0 00-.75.75V21a.75.75 0 01-.75.75H5.625a1.875 1.875 0 01-1.875-1.875v-6.198a2.29 2.29 0 00.091-.086L12 5.43z" /></svg>`;
@@ -915,11 +916,7 @@ function ClusteredJobSiteMarker({
 const LiveMapPage: React.FC<Props> = (props) => {
   const { users, submissions, onRefresh, isRefreshing, locationHistory, settings, deliveryHubs, isLoading, isHydrated } = props;
 
-  const API_KEY =
-    settings?.googleMapsApiKey ||
-    process.env.GOOGLE_MAPS_PLATFORM_KEY ||
-    (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
-    'AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M';
+  const API_KEY = settings?.googleMapsApiKey || getGoogleMapsKey();
 
   const hasValidKey = Boolean(API_KEY) && API_KEY !== 'YOUR_API_KEY';
 

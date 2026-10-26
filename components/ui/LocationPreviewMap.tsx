@@ -6,6 +6,7 @@ import Button from './Button';
 import { findNearestHub, DEFAULT_DELIVERY_HUBS } from '../../constants';
 import { MapLiveTravelTimeBadge } from './MapLiveTravelTimeBadge';
 import { reverseGeocodeCoords } from '../../services/geocodingService';
+import { getGoogleMapsKey } from '../../services/appConfigService';
 
 interface LocationPreviewMapProps {
   latitude?: number;
@@ -1014,11 +1015,7 @@ const LocationPreviewMapFallback: React.FC<LocationPreviewMapProps> = (props) =>
 };
 
 export const LocationPreviewMap: React.FC<LocationPreviewMapProps> = (props) => {
-  const API_KEY =
-    props.googleMapsApiKey ||
-    process.env.GOOGLE_MAPS_PLATFORM_KEY ||
-    (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
-    'AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M';
+  const API_KEY = props.googleMapsApiKey || getGoogleMapsKey();
 
   const hasValidKey = Boolean(API_KEY) && API_KEY !== 'YOUR_API_KEY';
 

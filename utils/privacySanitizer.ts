@@ -1,8 +1,8 @@
 /**
  * Privacy & PII Data Sanitizer
  * Automatically masks customer personally identifiable information (PII)
- * such as mobile numbers, emails, customer names, vehicle numbers, and addresses
- * in system console logs and debug diagnostics.
+ * such as mobile numbers, emails, customer names, vehicle numbers, passwords,
+ * database URLs, and addresses in system console logs and debug diagnostics.
  */
 
 /**
@@ -73,13 +73,17 @@ export function maskAddress(address: string | null | undefined): string {
 // Regex patterns for inline string PII detection
 const PHONE_PATTERN = /(\b(?:\+91|91)?[6-9]\d{9}\b)/g;
 const EMAIL_PATTERN = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+const DB_URL_PATTERN = /(postgres(?:ql)?:\/\/[^\s'"]+)/gi;
+const BEARER_PATTERN = /(Bearer\s+[a-zA-Z0-9_\-\.]+)/gi;
 
 /**
- * Sanitize a string by masking any phone numbers or email addresses found within it
+ * Sanitize a string by masking any phone numbers, email addresses, database URLs, or tokens
  */
 export function sanitizeString(text: string): string {
   if (!text || typeof text !== 'string') return text;
   return text
+    .replace(DB_URL_PATTERN, 'postgres://[PROTECTED_DATABASE_CREDENTIALS]')
+    .replace(BEARER_PATTERN, 'Bearer [PROTECTED_TOKEN]')
     .replace(EMAIL_PATTERN, (match) => maskEmail(match))
     .replace(PHONE_PATTERN, (match) => maskPhone(match));
 }
@@ -92,7 +96,7 @@ const SENSITIVE_PHONE_KEYS = new Set([
 
 const SENSITIVE_NAME_KEYS = new Set([
   'customername', 'user_name', 'username', 'customerfirstname',
-  'customerlastname', 'firstname', 'lastname'
+  'customerlastname', 'firstname', 'lastname', 'fullname'
 ]);
 
 const SENSITIVE_EMAIL_KEYS = new Set([
@@ -111,7 +115,8 @@ const SENSITIVE_CAR_REG_KEYS = new Set([
 
 const SENSITIVE_TOKEN_KEYS = new Set([
   'razorpaypaymentid', 'razorpay_payment_id', 'customersignature',
-  'password', 'auth_token', 'authorization'
+  'password', 'auth_token', 'authorization', 'token', 'secret',
+  'database_url', 'databaseurl', 'connectionstring', 'apikey', 'key'
 ]);
 
 /**
@@ -130,6 +135,10 @@ export function maskObjectPII(data: any, depth = 0): any {
   }
 
   if (Array.isArray(data)) {
+    // If it's a large collection of items, don't dump all items to console
+    if (data.length > 10) {
+      return `[Private Data Collection: ${data.length} items protected]`;
+    }
     return data.map(item => maskObjectPII(item, depth + 1));
   }
 
@@ -158,9 +167,8 @@ export function maskObjectPII(data: any, depth = 0): any {
       } else if (SENSITIVE_CAR_REG_KEYS.has(lowerKey)) {
         masked[key] = maskCarReg(value as any);
       } else if (SENSITIVE_TOKEN_KEYS.has(lowerKey)) {
-        masked[key] = '[Protected Token/Signature]';
+        masked[key] = '[Protected Credential]';
       } else if (lowerKey === 'rawdata' || lowerKey === 'originalorderjson') {
-        // Try parsing JSON or mask the whole raw string
         if (typeof value === 'string') {
           try {
             const parsed = JSON.parse(value);
@@ -209,15 +217,27 @@ export function installConsoleSanitizer(): void {
     });
   };
 
+  const isSuppressedDebug = (firstArg: any): boolean => {
+    if (typeof firstArg === 'string') {
+      const lower = firstArg.toLowerCase();
+      if (lower.startsWith('[debug]') || lower.includes('password') || lower.includes('token') || lower.includes('credential')) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   console.log = (...args: any[]) => {
-    // Suppress verbose raw debug statements
-    if (typeof args[0] === 'string' && args[0].startsWith('[DEBUG] App:')) {
+    if (args.length > 0 && isSuppressedDebug(args[0])) {
       return;
     }
     originalLog(...sanitizeArgs(args));
   };
 
   console.info = (...args: any[]) => {
+    if (args.length > 0 && isSuppressedDebug(args[0])) {
+      return;
+    }
     originalInfo(...sanitizeArgs(args));
   };
 
@@ -230,7 +250,8 @@ export function installConsoleSanitizer(): void {
   };
 
   console.debug = (...args: any[]) => {
-    originalDebug(...sanitizeArgs(args));
+    // Suppress console.debug in production/console
+    return;
   };
 
   originalLog('🔒 [Privacy Protection] Global console PII sanitizer and data masking active.');

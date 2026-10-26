@@ -3,13 +3,18 @@
  * Resolves the active backend URL for API calls (Cloudflare Workers / Same-Origin / Custom / Env).
  */
 
+// Obsolete dead endpoints that should never be called
 const KNOWN_DEAD_BACKEND_URLS = [
   'https://a-big-engine-backend-production-2873.up.railway.app',
   'a-big-engine-backend-production-2873.up.railway.app',
   'ais-dev-sevs7hmwy2pkzxsp4egr3n',
-  'onrender.com',
-  'a-big-engine-backend.abigengine.workers.dev'
+  'onrender.com'
 ];
+
+/**
+ * Primary SSOT Admin Backend hosted on Cloudflare Workers
+ */
+export const DEFAULT_CLOUDFLARE_ADMIN_BACKEND_URL = 'https://a-big-engine-admin-backend.abigengine.workers.dev';
 
 /**
  * Checks if a given URL is a known dead/defunct backend endpoint
@@ -44,6 +49,11 @@ export const purgeDeadBackendUrls = () => {
   } catch {}
 };
 
+// Immediate purge of dead URLs on module execution
+if (typeof window !== 'undefined') {
+  purgeDeadBackendUrls();
+}
+
 /**
  * Resets backend connection back to relative same-origin /api
  */
@@ -57,8 +67,17 @@ export const resetBackendUrlToSameOrigin = () => {
   } catch {}
 };
 
-// Default fallback is relative same-origin ('' empty string) to avoid cross-origin CORS errors
-export const DEFAULT_RAILWAY_BACKEND_URL = '';
+export const resetBackendUrlToCloudflareAdmin = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('cloudflare_worker_url', DEFAULT_CLOUDFLARE_ADMIN_BACKEND_URL);
+    localStorage.removeItem('custom_backend_url');
+    localStorage.removeItem('neon_backend_url');
+    console.log('⚡ [backendConfig] Reset backend to Cloudflare Admin Backend:', DEFAULT_CLOUDFLARE_ADMIN_BACKEND_URL);
+  } catch {}
+};
+
+export const DEFAULT_RAILWAY_BACKEND_URL = DEFAULT_CLOUDFLARE_ADMIN_BACKEND_URL;
 
 /**
  * Gets configured Cloudflare Worker URL from localStorage or environment
@@ -70,11 +89,7 @@ export const getCloudflareWorkerUrl = (): string => {
       return cf.trim().replace(/\/+$/, '');
     }
   }
-  const envCf = (import.meta as any).env?.VITE_CLOUDFLARE_WORKER_URL;
-  if (envCf && typeof envCf === 'string' && envCf.trim() !== '' && !isDeadBackendUrl(envCf)) {
-    return envCf.trim().replace(/\/+$/, '');
-  }
-  return '';
+  return DEFAULT_CLOUDFLARE_ADMIN_BACKEND_URL;
 };
 
 /**
@@ -109,22 +124,8 @@ export const getBackendBaseUrl = (): string => {
     }
   }
 
-  const envCf = (import.meta as any).env?.VITE_CLOUDFLARE_WORKER_URL;
-  if (envCf && typeof envCf === 'string' && envCf.trim() !== '' && !isDeadBackendUrl(envCf)) {
-    return envCf.trim().replace(/\/+$/, '');
-  }
-
-  const envUrl = (import.meta as any).env?.VITE_BACKEND_URL;
-  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '' && !isDeadBackendUrl(envUrl)) {
-    return envUrl.trim().replace(/\/+$/, '');
-  }
-
-  // Default to relative same-origin ('') in browser so all /api/* requests hit the current host directly without CORS
-  if (typeof window === 'undefined') {
-    const port = (typeof process !== 'undefined' && process.env?.PORT) ? process.env.PORT : 3000;
-    return `http://localhost:${port}`;
-  }
-  return '';
+  // Always route to admin backend in Cloudflare
+  return DEFAULT_CLOUDFLARE_ADMIN_BACKEND_URL;
 };
 
 /**

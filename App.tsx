@@ -73,6 +73,7 @@ const ClientServiceTracker = React.lazy(() => import('./components/ClientService
 
 import AppRouter from './components/routing/AppRouter';
 import SkeletonLoader from './components/ui/SkeletonLoader';
+import { getGoogleMapsKey } from './services/appConfigService';
 import NewOrderAlertModal from './components/dashboard/NewOrderAlertModal';
 import { playNewOrderChime } from './utils/audioChime';
 
@@ -324,7 +325,7 @@ export const App: React.FC = () => {
     googleDriveUploadUrl: initialUrls.googleDriveUploadUrl, 
     customLogoUrl: localStorage.getItem('customLogoUrl') || '', 
     retentionKpiTargets: defaultKpiTargets,
-    googleMapsApiKey: localStorage.getItem('googleMapsApiKey') || 'AIzaSyCKvKnwuiCfVbgmFgAp_EP17GV9PuGvy5M',
+    googleMapsApiKey: localStorage.getItem('googleMapsApiKey') || getGoogleMapsKey(),
     hubLatitude: parseFloat(localStorage.getItem('hubLatitude') || '22.572646'),
     hubLongitude: parseFloat(localStorage.getItem('hubLongitude') || '88.363895'),
     maxDistanceKm: parseFloat(localStorage.getItem('maxDistanceKm') || '20'),
